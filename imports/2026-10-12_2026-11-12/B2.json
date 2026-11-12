@@ -1,0 +1,20 @@
+[
+  {
+    "target_name": "AICodeMirror",
+    "event_at": "2026-10-26",
+    "change_type": "营销活动",
+    "summary": "第三方线索：ProxyCC 二手页面载有 AICodeMirror「满满双份充值券」活动，可领取 7 折按量付费充值优惠券（激活码 CREATEX2027、AICODEMIRROR2026，活动截止 2026/12/31 23:59，活动开始时间未披露）。第三方线索，官方公告及活动开始日未确认。",
+    "model": null,
+    "old_value": null,
+    "new_value": null,
+    "change_percent": null,
+    "source_url": "https://proxycc.cc/zh/aicodemirror/",
+    "severity": "low",
+    "verify_status": "pending",
+    "signal_type": "confirmed",
+    "evidence_level": "secondary_pending",
+    "source_title": "Claude/Codex 中转站导航 | ProxyCC",
+    "published_at": "2026-10-26",
+    "event_key": "aicodemirror-marketing-recharge-coupon-proxycc"
+  }
+]

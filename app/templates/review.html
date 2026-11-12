@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}人工核对 · 竞品监测{% endblock %}
+{% block content %}
+<h1>人工核对</h1>
+<p>仅显示 verify_status = pending 的记录。</p>
+{% if rows %}
+<table>
+  <thead><tr><th>检测时间（北京）</th><th>对象</th><th>类型 / 信号</th><th>内容</th><th>级别</th><th>操作</th></tr></thead>
+  <tbody>{% for change, target in rows %}<tr>
+    <td>{{ change.detected_at|bj }}</td>
+    <td>{{ group_labels[target.group_code] }} / {{ target.name }}</td>
+    <td>{{ change.change_type }} / {{ change.signal_type }}</td>
+    <td class="summary">{{ change.summary }}{% if change.source_url %}<br><a href="{{ change.source_url }}" target="_blank" rel="noreferrer">查看原文</a>{% endif %}</td>
+    <td><span class="badge {{ change.severity }}">{{ change.severity }}</span></td>
+    <td><div class="actions">
+      <form method="post" action="/review/{{ change.id }}/confirm"><button type="submit">确认</button></form>
+      <form method="post" action="/review/{{ change.id }}/false-alarm"><button type="submit">误报</button></form>
+    </div></td>
+  </tr>{% endfor %}</tbody>
+</table>
+{% else %}<div class="empty">没有待核对记录</div>{% endif %}
+{% endblock %}

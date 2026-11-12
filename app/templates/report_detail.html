@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ report.title or "历史报告" }} · 竞品监测{% endblock %}
+{% block content %}
+<p><a href="/reports">← 返回报告列表</a></p>
+<article class="report-content">{{ rendered_content|safe }}</article>
+<details>
+  <summary>查看 Markdown 原文</summary>
+  <pre class="markdown-source">{{ report.content }}</pre>
+</details>
+{% endblock %}

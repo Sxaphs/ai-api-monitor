@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}手动报告 · 竞品监测{% endblock %}
+{% block content %}
+<h1>手动周报 / 月报</h1>
+<p>报告按北京时间生成并保存，历史报告可随时回看。</p>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form class="preset-actions" method="post" action="/reports">
+  <button type="submit" name="preset" value="7">生成近 7 天（周报）</button>
+  <button type="submit" name="preset" value="30">生成近 30 天（月报）</button>
+</form>
+<form class="filters" method="post" action="/reports">
+  <input type="hidden" name="preset" value="custom">
+  <label>开始日期（含）<input type="date" name="start_date" required></label>
+  <label>结束日期（含）<input type="date" name="end_date" required></label>
+  <button type="submit">生成自定义报告</button>
+</form>
+<h2>历史报告</h2>
+{% if reports %}
+<table>
+  <thead><tr><th>生成时间（北京）</th><th>报告</th><th>类型</th><th>统计窗口（北京）</th></tr></thead>
+  <tbody>{% for report in reports %}<tr>
+    <td>{{ report.generated_at|bj }}</td>
+    <td><a href="/reports/{{ report.id }}">{{ report.title or "历史报告（旧版）" }}</a></td>
+    <td>{{ kind_labels.get(report.report_kind, "旧版/未分类") }}</td>
+    <td>{{ report.period_start|bj }} 至 {{ report.period_end|bj }}</td>
+  </tr>{% endfor %}</tbody>
+</table>
+{% else %}<div class="empty">尚未生成报告</div>{% endif %}
+{% endblock %}

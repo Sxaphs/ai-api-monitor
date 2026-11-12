@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>API 监测台，2026-11-12 监测日报</title>
+  <style>
+    :root {
+      --ink: #111111;
+      --paper: #ffffff;
+      --muted: #626262;
+      --line: #171717;
+      --soft-line: #d8d8d2;
+      --marker: #fff200;
+      --source-blue: #1857a4;
+      --note-red: #b3261e;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { background: #eeeeea; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    button, select { font: inherit; }
+    button, a, select { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, select:focus-visible {
+      outline: 3px solid var(--source-blue);
+      outline-offset: 3px;
+    }
+    a { color: inherit; }
+    h1, h2, h3, p, dl, dd { margin: 0; }
+    img { display: block; max-width: 100%; }
+
+    .page {
+      width: min(1360px, 100%);
+      margin: 0 auto;
+      background: var(--paper);
+      border-right: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+    .topline {
+      min-height: 38px;
+      padding: 8px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: #ffffff;
+      background: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    .topline-index { color: var(--marker); }
+
+    .masthead {
+      padding: 22px 28px 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 32px;
+      border-bottom: 3px solid var(--line);
+    }
+    .eyebrow {
+      margin-bottom: 4px;
+      color: var(--source-blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(36px, 4vw, 54px);
+      line-height: 1.08;
+      letter-spacing: -.045em;
+      font-weight: 900;
+    }
+    h1 mark {
+      padding: 0 .08em;
+      color: var(--ink);
+      background: var(--marker);
+    }
+    .masthead-note { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .report-date { min-width: 210px; text-align: right; }
+    .report-date span {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+    }
+    .report-date strong {
+      display: block;
+      margin-top: 2px;
+      font-family: "Courier New", monospace;
+      font-size: 25px;
+      line-height: 1.2;
+      letter-spacing: -.04em;
+    }
+
+    .window-strip {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr) 150px;
+      align-items: center;
+      min-height: 70px;
+      border-bottom: 2px solid var(--line);
+    }
+    .window-label, .window-zone {
+      align-self: stretch;
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    .window-label { border-right: 1px solid var(--line); }
+    .window-zone { border-left: 1px solid var(--line); text-align: right; }
+    .window-range {
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      font-family: "Courier New", monospace;
+      font-size: 23px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -.035em;
+    }
+    .window-connector {
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      letter-spacing: .1em;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-bottom: 3px solid var(--line);
+    }
+    .stat {
+      min-height: 118px;
+      padding: 14px 22px 15px;
+      border-right: 1px solid var(--line);
+    }
+    .stat:last-child { border-right: 0; }
+    .stat-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .07em;
+    }
+    .stat-value {
+      display: inline-block;
+      margin-top: 2px;
+      font-family: "Courier New", monospace;
+      font-size: 52px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -.08em;
+    }
+    .stat-value.marked { background: var(--marker); padding: 0 .12em 0 .04em; }
+    .stat-unit { margin-left: 8px; font-size: 14px; font-weight: 700; }
+    .stat-note { margin-top: 5px; color: var(--muted); font-size: 12px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.9fr) minmax(320px, .9fr);
+      align-items: start;
+    }
+    .main-column { min-width: 0; border-right: 2px solid var(--line); }
+    .side-column { min-width: 0; }
+
+    .filters {
+      padding: 16px 22px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 210px;
+      gap: 18px;
+      border-bottom: 2px solid var(--line);
+    }
+    .filter-label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .1em;
+    }
+    .group-buttons { display: flex; gap: 6px; }
+    .filter-btn {
+      min-width: 48px;
+      min-height: 44px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .filter-btn:hover { background: #f2f2ed; }
+    .filter-btn[aria-pressed="true"] { color: #ffffff; background: var(--ink); }
+    .type-select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 36px 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .section-heading {
+      min-height: 68px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-heading h2, .side-heading h2 {
+      font-size: 21px;
+      line-height: 1.2;
+      letter-spacing: -.02em;
+    }
+    .section-kicker {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--source-blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+    }
+    .result-status { text-align: right; font-size: 12px; }
+    .result-status strong { font-size: 18px; }
+    .review-tally { margin-top: 2px; color: var(--muted); }
+
+    .change-item {
+      display: grid;
+      grid-template-columns: 62px minmax(0, 1fr);
+      border-bottom: 2px solid var(--line);
+    }
+    .change-number {
+      padding: 20px 10px;
+      border-right: 1px solid var(--line);
+      font-family: "Courier New", monospace;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+      text-align: center;
+    }
+    .change-number span {
+      display: block;
+      margin-top: 8px;
+      color: var(--note-red);
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: .1em;
+      writing-mode: vertical-rl;
+      margin-right: auto;
+      margin-left: auto;
+    }
+    .change-content { min-width: 0; padding: 20px 22px 18px; }
+    .change-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 168px;
+      gap: 20px;
+      align-items: start;
+    }
+    .change-type {
+      margin-bottom: 5px;
+      color: var(--source-blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+    .change-head h3 {
+      font-size: 25px;
+      line-height: 1.2;
+      letter-spacing: -.025em;
+      overflow-wrap: anywhere;
+    }
+    .change-subtitle { margin-top: 6px; color: var(--muted); font-size: 14px; }
+    .brand-source { padding-top: 2px; }
+    .brand-source img { width: 160px; height: auto; margin-left: auto; }
+    .brand-source figcaption {
+      margin-top: 7px;
+      color: var(--source-blue);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .change-meta {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--soft-line);
+      border-bottom: 1px solid var(--soft-line);
+    }
+    .meta-cell { padding: 9px 10px; border-right: 1px solid var(--soft-line); }
+    .meta-cell:first-child { padding-left: 0; }
+    .meta-cell:last-child { border-right: 0; }
+    .meta-cell dt { color: var(--muted); font-size: 12px; }
+    .meta-cell dd { margin-top: 2px; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+    .confirmed-text { color: var(--ink); }
+    .confirmed-text::before { content: "■"; margin-right: 6px; color: var(--note-red); font-size: 12px; }
+
+    .change-actions {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px 16px;
+      align-items: center;
+    }
+    .source-link {
+      min-height: 44px;
+      padding: 10px 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border: 1px solid var(--ink);
+      color: #ffffff;
+      background: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .source-link:hover { color: var(--ink); background: var(--marker); }
+    .source-link span:last-child { font-size: 20px; line-height: 1; }
+    .review-btn {
+      min-height: 44px;
+      padding: 9px 15px;
+      border: 1px solid var(--ink);
+      border-radius: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .review-btn:hover { background: #f2f2ed; }
+    .review-btn[aria-pressed="true"] { background: var(--marker); }
+    .source-url {
+      grid-column: 1 / -1;
+      color: var(--source-blue);
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .empty-state { padding: 30px 22px; border-bottom: 2px solid var(--line); }
+    .empty-state strong { display: block; margin-bottom: 6px; font-size: 18px; }
+    .empty-state p { max-width: 580px; color: var(--muted); }
+    .filter-announcement { padding: 10px 22px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); }
+
+    .side-section { border-bottom: 2px solid var(--line); }
+    .side-heading { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
+    .coverage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .coverage-cell {
+      min-height: 112px;
+      padding: 12px 18px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .coverage-cell:nth-child(2n) { border-right: 0; }
+    .coverage-cell.active { background: var(--marker); }
+    .coverage-letter { font-size: 12px; font-weight: 800; letter-spacing: .1em; }
+    .coverage-number {
+      display: inline-block;
+      margin-top: 3px;
+      font-family: "Courier New", monospace;
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -.07em;
+    }
+    .coverage-unit { margin-left: 5px; font-size: 12px; }
+    .coverage-total { padding: 10px 20px; font-size: 12px; font-weight: 700; text-align: right; }
+
+    .collection-list { padding: 0 20px; }
+    .collection-row {
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--soft-line);
+    }
+    .collection-row:last-child { border-bottom: 0; }
+    .collection-row dt { font-size: 14px; }
+    .collection-row dd { font-family: "Courier New", monospace; font-size: 19px; font-weight: 700; }
+    .collection-row dd span { font-family: Arial, "Microsoft YaHei", sans-serif; font-size: 12px; }
+    .pending-note {
+      margin: 0 20px 16px;
+      padding: 10px 12px;
+      border-left: 5px solid var(--ink);
+      background: #f2f2ed;
+      font-size: 12px;
+    }
+
+    .price-note { padding: 18px 20px 20px; }
+    .price-label {
+      display: inline-block;
+      padding: 2px 7px;
+      background: var(--marker);
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .price-note p { margin-top: 10px; }
+    .price-note .fine-print { color: var(--muted); font-size: 12px; }
+
+    .method-list { padding: 14px 20px 18px; list-style: none; margin: 0; }
+    .method-list li {
+      position: relative;
+      padding: 0 0 12px 20px;
+      font-size: 14px;
+    }
+    .method-list li:last-child { padding-bottom: 0; }
+    .method-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .55em;
+      width: 7px;
+      height: 7px;
+      background: var(--note-red);
+    }
+    .method-list li:nth-child(2n)::before { background: var(--source-blue); }
+
+    .source-notes {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      border-top: 0;
+    }
+    .source-notes-heading { padding: 20px 24px; border-right: 1px solid var(--line); }
+    .source-notes-heading h2 { font-size: 18px; }
+    .source-notes-heading span { color: var(--note-red); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
+    .source-note-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .source-note { padding: 16px 20px; border-right: 1px solid var(--line); }
+    .source-note:last-child { border-right: 0; }
+    .source-note strong { display: block; font-size: 14px; }
+    .source-note strong span { color: var(--source-blue); margin-right: 8px; }
+    .source-note a {
+      min-height: 44px;
+      display: inline-block;
+      padding-top: 9px;
+      color: var(--source-blue);
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+      text-underline-offset: 3px;
+    }
+    .footer-line {
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-top: 3px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .window-strip { grid-template-columns: 150px minmax(0, 1fr) 120px; }
+      .window-range { font-size: 19px; gap: 10px; }
+      .layout { grid-template-columns: minmax(0, 1.55fr) minmax(280px, .8fr); }
+      .filters { grid-template-columns: 1fr; gap: 12px; }
+      .change-head { grid-template-columns: 1fr; }
+      .brand-source { display: flex; align-items: center; gap: 16px; }
+      .brand-source img { margin-left: 0; width: 150px; }
+      .brand-source figcaption { margin-top: 0; text-align: left; }
+      .change-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .meta-cell:nth-child(2) { border-right: 0; }
+      .meta-cell:nth-child(-n+2) { border-bottom: 1px solid var(--soft-line); }
+      .meta-cell:nth-child(3) { padding-left: 0; }
+      .change-actions { grid-template-columns: 1fr; }
+      .review-btn { width: 100%; }
+    }
+
+    @media (max-width: 700px) {
+      html { background: var(--paper); }
+      .page { border: 0; }
+      .topline { padding: 9px 16px; flex-wrap: wrap; gap: 2px 12px; }
+      .masthead { padding: 18px 16px; grid-template-columns: 1fr; gap: 16px; }
+      .report-date { min-width: 0; padding-top: 10px; border-top: 1px solid var(--soft-line); text-align: left; }
+      .report-date strong { font-size: 22px; }
+      .window-strip { grid-template-columns: 1fr; }
+      .window-label, .window-zone { padding: 9px 16px; border: 0; text-align: left; }
+      .window-label { border-bottom: 1px solid var(--soft-line); }
+      .window-zone { border-top: 1px solid var(--soft-line); }
+      .window-range {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        font-size: 21px;
+      }
+      .window-connector { letter-spacing: 0; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat { min-height: 106px; padding: 13px 16px; }
+      .stat:nth-child(2) { border-right: 0; }
+      .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .stat-value { font-size: 44px; }
+      .layout { grid-template-columns: 1fr; }
+      .main-column { border-right: 0; }
+      .side-column { border-top: 3px solid var(--line); }
+      .filters { padding: 15px 16px; }
+      .group-buttons { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+      .filter-btn { min-width: 0; padding: 0 6px; }
+      .section-heading { padding: 14px 16px; align-items: flex-start; }
+      .section-heading h2 { font-size: 19px; }
+      .change-item { grid-template-columns: 40px minmax(0, 1fr); }
+      .change-number { padding: 17px 6px; font-size: 20px; }
+      .change-number span { font-size: 12px; }
+      .change-content { padding: 17px 16px; }
+      .change-head h3 { font-size: 22px; }
+      .brand-source { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .brand-source img { width: 152px; }
+      .change-actions { gap: 10px; }
+      .source-link { width: 100%; }
+      .source-url { font-size: 12px; }
+      .empty-state, .filter-announcement { padding-right: 16px; padding-left: 16px; }
+      .coverage-cell { min-height: 100px; }
+      .source-notes { grid-template-columns: 1fr; }
+      .source-notes-heading { padding: 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .source-note-list { grid-template-columns: 1fr; }
+      .source-note { padding: 14px 16px; border-right: 0; border-bottom: 1px solid var(--soft-line); }
+      .source-note:last-child { border-bottom: 0; }
+      .footer-line { padding: 12px 16px; flex-direction: column; gap: 2px; }
+    }
+
+    .topline,
+    .eyebrow,
+    .report-date span,
+    .window-label,
+    .window-zone,
+    .window-connector,
+    .stat-label,
+    .filter-label,
+    .section-kicker,
+    .change-type,
+    .change-number span,
+    .coverage-letter,
+    .source-notes-heading span {
+      letter-spacing: normal;
+    }
+    .topline { font-size: 14px; }
+    .eyebrow { text-transform: none; }
+    h1 { font-family: Georgia, "Songti SC", "SimSun", serif; }
+    .source-url, .source-note a {
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+    }
+
+    @media print {
+      html { background: #ffffff; }
+      .page { width: 100%; border: 0; }
+      .filters, .review-btn { display: none; }
+      .source-link { color: #000000; background: #ffffff; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="topline">
+        <span>DAILY API MONITOR / INTERNAL BRIEFING</span>
+        <span class="topline-index">视觉初稿，日报网格</span>
+      </div>
+      <div class="masthead">
+        <div>
+          <p class="eyebrow">Competitor &amp; upstream watch</p>
+          <h1>API <mark>监测台</mark></h1>
+          <p class="masthead-note">先核对，再判断；所有变动回到原始证据。</p>
+        </div>
+        <div class="report-date">
+          <span>REPORT DATE / 报告日期</span>
+          <strong>2026.11.12</strong>
+        </div>
+      </div>
+      <div class="window-strip" aria-label="报告时间窗">
+        <div class="window-label">REPORT WINDOW<br>监测时间窗</div>
+        <div class="window-range">
+          <span>2026-11-12 08:00</span>
+          <span class="window-connector">至</span>
+          <span>2026-11-13 08:00</span>
+        </div>
+        <div class="window-zone">北京时间<br>UTC+8</div>
+      </div>
+      <section class="summary-grid" aria-label="当日监测摘要">
+        <div class="stat">
+          <div class="stat-label"><span>监测对象</span><span>TARGETS</span></div>
+          <strong class="stat-value">26</strong><span class="stat-unit">个</span>
+          <p class="stat-note">A / B / C / D 四组</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>当前快照</span><span>SNAPSHOTS</span></div>
+          <strong class="stat-value">25</strong><span class="stat-unit">条</span>
+          <p class="stat-note">当前数据库记录</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>有效变动</span><span>CONFIRMED</span></div>
+          <strong class="stat-value marked">2</strong><span class="stat-unit">条</span>
+          <p class="stat-note">均为 OpenRouter</p>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span>待核对</span><span>PENDING</span></div>
+          <strong class="stat-value">0</strong><span class="stat-unit">条</span>
+          <p class="stat-note">当前无 pending 记录</p>
+        </div>
+      </section>
+    </header>
+
+    <main class="layout">
+      <div class="main-column">
+        <section class="filters" aria-label="变动筛选">
+          <div>
+            <span class="filter-label" id="group-filter-label">按监测分组筛选</span>
+            <div class="group-buttons" role="group" aria-labelledby="group-filter-label">
+              <button class="filter-btn" type="button" data-group-filter="all" aria-pressed="true">全部</button>
+              <button class="filter-btn" type="button" data-group-filter="A" aria-pressed="false">A</button>
+              <button class="filter-btn" type="button" data-group-filter="B" aria-pressed="false">B</button>
+              <button class="filter-btn" type="button" data-group-filter="C" aria-pressed="false">C</button>
+              <button class="filter-btn" type="button" data-group-filter="D" aria-pressed="false">D</button>
+            </div>
+          </div>
+          <div>
+            <label class="filter-label" for="type-filter">按变动类型筛选</label>
+            <select class="type-select" id="type-filter">
+              <option value="all">全部类型</option>
+              <option value="announcement">X 公告</option>
+              <option value="feature">新功能</option>
+            </select>
+          </div>
+        </section>
+
+        <section aria-labelledby="changes-title">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker">Today / Evidence first</span>
+              <h2 id="changes-title">当日已确认变动</h2>
+            </div>
+            <div class="result-status" aria-live="polite">
+              <div>显示 <strong id="result-count">2</strong> / 2 条</div>
+              <div class="review-tally">本地核对 <span id="review-count">0</span> / 2，不写入数据库</div>
+            </div>
+          </div>
+
+          <div id="change-list">
+            <article class="change-item" data-group="A" data-type="announcement" data-change-id="gemini-decision-1">
+              <div class="change-number">X<span>CONF.</span></div>
+              <div class="change-content">
+                <div class="change-head">
+                  <div>
+                    <p class="change-type">X 公告 / OPENROUTER</p>
+                    <h3>Gemini Decision 1 公告</h3>
+                    <p class="change-subtitle">OpenRouter 官方 X 账号发布的公告记录。</p>
+                  </div>
+                  <figure class="brand-source">
+                    <img class="openrouter-logo" width="1024" height="169" alt="OpenRouter" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAyNCIgaGVpZ2h0PSIxNjkiIHZpZXdCb3g9IjAgMCAxMDI0IDE2OSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE4NS40NCAwQzIxMy4zNzIgMCAyMzYuMDE0IDIyLjY0MzEgMjM2LjAxNCA1MC41NzQ1QzIzNi4wMTQgNzguNTA2IDIxMy4zNzIgMTAxLjE0OSAxODUuNDQgMTAxLjE0OUwyMzUuNjA1IDE1MS4zMTRDMjQxLjk3NyAxNTcuNjg2IDIzNy40NjQgMTY4LjU4MiAyMjguNDUzIDE2OC41ODJIODQuMjkwOEMzNy43MzgzIDE2OC41ODIgMCAxMzAuODQzIDAgODQuMjkwOEMwIDM3LjczODMgMzcuNzM4MyAwIDg0LjI5MDggMEgxODUuNDRaTTg0LjI5MDggMzMuNzE2NEM1Ni4zNTkzIDMzLjcxNjQgMzMuNzE2MyA1Ni4zNTkzIDMzLjcxNjMgODQuMjkwOEMzMy43MTYzIDExMi4yMjIgNTYuMzU5MyAxMzQuODY1IDg0LjI5MDggMTM0Ljg2NUMxMTIuMjIyIDEzNC44NjUgMTM0Ljg2NSAxMTIuMjIyIDEzNC44NjUgODQuMjkwOEMxMzQuODY1IDU2LjM1OTMgMTEyLjIyMiAzMy43MTY0IDg0LjI5MDggMzMuNzE2NFoiIGZpbGw9IiMwMzA4MEEiLz4KPHBhdGggZD0iTTM0NS40MTggNTMuODQ1N0MzNjcuMTQyIDUzLjg0NTcgMzg1LjE3NiA3MC42MDEzIDM4NS4xNzYgOTIuODk0NkMzODUuMTc2IDExNS4zMyAzNjcuNTY5IDEzMi41MTIgMzQ1LjI3NiAxMzIuNTEyQzMyMy40MDggMTMyLjUxMiAzMDUuMjMyIDExNS42MTQgMzA1LjIzMiA5My4xNzg4QzMwNS4yMzIgNzAuNzQzNyAzMjMuNDA4IDUzLjg0NTcgMzQ1LjQxOCA1My44NDU3Wk0zNDUuNDE4IDExNy4xNzZDMzU5LjE5MSAxMTcuMTc2IDM2Ny45OTUgMTA2LjI0MyAzNjcuOTk1IDkzLjE3ODhDMzY3Ljk5NSA4MC4xMTUxIDM1OS4wNDkgNjkuMTgxMiAzNDUuMjc2IDY5LjE4MTJDMzMxLjY0NCA2OS4xODEyIDMyMi41NTYgNzkuODMwOCAzMjIuNTU2IDkyLjg5NDZDMzIyLjU1NiAxMDUuODE3IDMzMS42NDQgMTE3LjE3NiAzNDUuNDE4IDExNy4xNzZaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik00MzMuMjI2IDEzMi4zNzJDNDI3LjQwNSAxMzIuMzcyIDQxNC42MjUgMTI5LjM5IDQwOC42NjEgMTIwLjE2VjE2OC41ODFIMzkxLjc2M1Y1NS40MUg0MDguMjM1VjY3LjE5NTZDNDE0LjYyNSA1Ni44MzAyIDQyNi45NzkgNTMuOTkgNDMzLjY1MyA1My45OUM0NTYuOTQgNTMuOTkgNDcwLjg1NiA3NC4wMTE4IDQ3MC44NTYgOTMuMDM4OUM0NzAuODU2IDExMy42MjggNDU1LjY2MiAxMzIuMzcyIDQzMy4yMjYgMTMyLjM3MlpNNDMxLjA5NiAxMTcuMDM3QzQ0NC43MjkgMTE3LjAzNyA0NTMuODE2IDEwNi4yNDUgNDUzLjgxNiA5My4xODEzQzQ1My44MTYgODAuMTE3NSA0NDQuODcgNjkuMTgzNiA0MzEuMDk2IDY5LjE4MzZDNDE3LjMyMyA2OS4xODM2IDQwOC4zNzcgODAuMTE3NSA0MDguMzc3IDkzLjE4MTNDNDA4LjM3NyAxMDYuMjQ1IDQxNy4zMjMgMTE3LjAzNyA0MzEuMDk2IDExNy4wMzdaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik00OTQuMTU3IDk4LjI5MDZDNDk0LjQ0MiAxMDkuOTM0IDUwNS4yMzMgMTE4LjAyOCA1MTYuMzA4IDExOC4wMjhDNTI1LjUzOCAxMTguMDI4IDUzMi4zNTQgMTE0LjYyIDUzNi43NTcgMTA2LjI0M0w1NDguOTY4IDExNC4zMzZDNTQyLjQzNiAxMjYuNDA1IDUyOS43OTkgMTMyLjY1NCA1MTYuNTkzIDEzMi42NTRDNDk0LjE1NyAxMzIuNjU0IDQ3Ni44MzMgMTE1Ljc1NiA0NzYuODMzIDkzLjE3ODhDNDc2LjgzMyA3MS43MzcxIDQ5My4wMjEgNTMuODQ1NyA1MTUuMDMxIDUzLjg0NTdDNTM4LjYwMiA1My44NDU3IDU1MS45NSA3MC4xNzUyIDU1MS45NSA5My4wMzY1QzU1MS45NSA5My43NDY4IDU1MS45NSA5Ni40NDQ1IDU1MS42NjUgOTguMjkwNkg0OTQuMTU3Wk00OTUuMDA5IDg1LjUxMDZINTM0Ljc2OUM1MzQuMiA3NC43MTkxIDUyNS41MzggNjguMzI5IDUxNS4wMzEgNjguMzI5QzUwNC42NjUgNjguMzI5IDQ5Ni41NzEgNzUuMTQ1MSA0OTUuMDA5IDg1LjUxMDZaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik02MTEuNjIzIDg4Ljc3NjdDNjExLjYyMyA3Ny45ODUyIDYwNi41MTIgNjkuODkxNSA1OTQuODY3IDY5Ljg5MTVDNTg0LjIxOCA2OS44OTE1IDU3Ny40MDIgNzcuNTU5MiA1NzcuNDAyIDg5LjA2MDVWMTMxLjIzNEg1NjAuNTA0VjU1LjQwNzZINTc2Ljk3N1Y2NS42MzEzQzU4NC4yMTggNTUuODMzOCA1OTQuMTU4IDUzLjg0NTcgNjAwLjEyMSA1My44NDU3QzYxOS40MzQgNTMuODQ1NyA2MjguNTIxIDY3LjMzNSA2MjguNTIxIDg0LjUxNjVWMTMxLjIzNEg2MTEuNjIzVjg4Ljc3NjdaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik02ODAuODE5IDcyLjQ0ODdDNjc5LjQgNzIuMTY0NCA2NzYuODQzIDcyLjAyMjYgNjc1Ljk5MiA3Mi4wMjI2QzY2My4wNyA3Mi4wMjI2IDY1Ni4yNTQgNzkuNjkwMyA2NTYuMjU0IDkyLjc1NDFWMTMxLjIzNUg2MzkuMzU2VjU1LjQwOTFINjU1LjgyOVY2Ny40Nzg4QzY2MC41MTQgNTguOTU4OSA2NjguNDY2IDU0LjY5ODcgNjc2LjcwMSA1NC42OTg3QzY3Ny42OTUgNTQuNjk4NyA2NzkuODI1IDU0Ljg0MTIgNjgwLjgxOSA1NS4xMjQ4VjcyLjQ0ODdaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik03MjIuOTkyIDUzLjg0NTdDNzQ0LjcxNyA1My44NDU3IDc2Mi43NTEgNzAuNjAxMyA3NjIuNzUxIDkyLjg5NDZDNzYyLjc1MSAxMTUuMzMgNzQ1LjE0NCAxMzIuNTEyIDcyMi44NTEgMTMyLjUxMkM3MDAuOTgzIDEzMi41MTIgNjgyLjgwNyAxMTUuNjE0IDY4Mi44MDcgOTMuMTc4OEM2ODIuODA3IDcwLjc0MzcgNzAwLjk4MyA1My44NDU3IDcyMi45OTIgNTMuODQ1N1pNNzIyLjk5MiAxMTcuMTc2QzczNi43NjUgMTE3LjE3NiA3NDUuNTY5IDEwNi4yNDMgNzQ1LjU2OSA5My4xNzg4Qzc0NS41NjkgODAuMTE1MSA3MzYuNjI0IDY5LjE4MTIgNzIyLjg1MSA2OS4xODEyQzcwOS4yMTggNjkuMTgxMiA3MDAuMTMxIDc5LjgzMDggNzAwLjEzMSA5Mi44OTQ2QzcwMC4xMzEgMTA1LjgxNyA3MDkuMjE4IDExNy4xNzYgNzIyLjk5MiAxMTcuMTc2WiIgZmlsbD0iIzAzMDgwQSIvPgo8cGF0aCBkPSJNNzg3LjYzOSA5Ny44NjcxQzc4Ny42MzkgMTA4LjY1OSA3OTIuNzUxIDExNi43NTIgODA0LjM5NSAxMTYuNzUyQzgxNS4wNDQgMTE2Ljc1MiA4MjEuODYgMTA5LjA4NSA4MjEuODYgOTcuNTgyOFY1NS40MTAzSDgzOC43NThWMTMxLjIzNkg4MjIuMjg2VjEyMS4wMTNDODE1LjA0NCAxMzAuODEgODA1LjEwNCAxMzIuNzk4IDc5OS4xNDIgMTMyLjc5OEM3ODAuMTE0IDEzMi43OTggNzcwLjc0MSAxMTkuMzA4IDc3MC43NDEgMTAxLjk4NVY1NS40MTAySDc4Ny42MzlWOTcuODY3MVoiIGZpbGw9IiMwMzA4MEEiLz4KPHBhdGggZD0iTTg3OC44MDUgMTA0LjExM0M4NzguODA1IDExMy40ODUgODgzLjQ5MSAxMTYuNzUgODkxLjg2OSAxMTYuNzVDODkzLjQzMSAxMTYuNzUgODk1LjEzNSAxMTYuNjA5IDg5Ny4yNjUgMTE2LjE4M1YxMzAuNTI0Qzg5NC4yODMgMTMxLjY2IDg5MC4zMDcgMTMyLjA4NiA4ODguMTc3IDEzMi4wODZDODcxLjg0NyAxMzIuMDg2IDg2MS45MDggMTIzLjU2NiA4NjEuOTA4IDEwNi44MTFWNzAuNjAxOEg4NDcuOTkyVjU1LjQwODJIODYxLjkwOFYzMS45Nzg1SDg3OC44MDVWNTUuNDA4Mkg4OTcuNDA3VjcwLjYwMThIODc4LjgwNVYxMDQuMTEzWiIgZmlsbD0iIzAzMDgwQSIvPgo8cGF0aCBkPSJNOTE3LjMxNiA5OC4yOTA2QzkxNy42MDEgMTA5LjkzNCA5MjguMzkyIDExOC4wMjggOTM5LjQ2OCAxMTguMDI4Qzk0OC42OTcgMTE4LjAyOCA5NTUuNTEzIDExNC42MiA5NTkuOTE2IDEwNi4yNDNMOTcyLjEyNyAxMTQuMzM2Qzk2NS41OTUgMTI2LjQwNSA5NTIuOTU4IDEzMi42NTQgOTM5Ljc1MiAxMzIuNjU0QzkxNy4zMTYgMTMyLjY1NCA4OTkuOTkzIDExNS43NTYgODk5Ljk5MyA5My4xNzg4Qzg5OS45OTMgNzEuNzM3MSA5MTYuMTggNTMuODQ1NyA5MzguMTkgNTMuODQ1N0M5NjEuNzYxIDUzLjg0NTcgOTc1LjEwOSA3MC4xNzUyIDk3NS4xMDkgOTMuMDM2NUM5NzUuMTA5IDkzLjc0NjggOTc1LjEwOSA5Ni40NDQ1IDk3NC44MjUgOTguMjkwNkg5MTcuMzE2Wk05MTguMTY4IDg1LjUxMDZIOTU3LjkyOEM5NTcuMzU5IDc0LjcxOTEgOTQ4LjY5NyA2OC4zMjkgOTM4LjE5IDY4LjMyOUM5MjcuODI0IDY4LjMyOSA5MTkuNzMxIDc1LjE0NTEgOTE4LjE2OCA4NS41MTA2WiIgZmlsbD0iIzAzMDgwQSIvPgo8cGF0aCBkPSJNMTAyNCA3Mi40NDg3QzEwMjIuNTggNzIuMTY0NCAxMDIwLjAyIDcyLjAyMjYgMTAxOS4xNyA3Mi4wMjI2QzEwMDYuMjUgNzIuMDIyNiA5OTkuNDM0IDc5LjY5MDMgOTk5LjQzNCA5Mi43NTQxVjEzMS4yMzVIOTgyLjUzNlY1NS40MDkxSDk5OS4wMDhWNjcuNDc4OEMxMDAzLjY5IDU4Ljk1ODkgMTAxMS42NSA1NC42OTg3IDEwMTkuODggNTQuNjk4N0MxMDIwLjg4IDU0LjY5ODcgMTAyMyA1NC44NDEyIDEwMjQgNTUuMTI0OFY3Mi40NDg3WiIgZmlsbD0iIzAzMDgwQSIvPgo8L3N2Zz4K">
+                    <figcaption>X，@OpenRouter</figcaption>
+                  </figure>
+                </div>
+                <dl class="change-meta">
+                  <div class="meta-cell"><dt>核对状态</dt><dd class="confirmed-text">confirmed</dd></div>
+                  <div class="meta-cell"><dt>分组</dt><dd>A 组 / OpenRouter</dd></div>
+                  <div class="meta-cell"><dt>检测时间（北京时间）</dt><dd>2026-11-12 22:59</dd></div>
+                  <div class="meta-cell"><dt>变动类型</dt><dd>X 公告</dd></div>
+                </dl>
+                <div class="change-actions">
+                  <a class="source-link" href="https://x.com/OpenRouter/status/2120583084005605816" target="_blank" rel="noopener noreferrer">
+                    <span>打开 X 原文</span><span aria-hidden="true">↗</span>
+                  </a>
+                  <button class="review-btn" type="button" aria-pressed="false">标记本次核对</button>
+                  <div class="source-url">x.com/OpenRouter/status/2120583084005605816</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="change-item" data-group="A" data-type="feature" data-change-id="mai-transcribe-2">
+              <div class="change-number">X<span>CONF.</span></div>
+              <div class="change-content">
+                <div class="change-head">
+                  <div>
+                    <p class="change-type">新功能 / OPENROUTER</p>
+                    <h3>MAI Transcribe 2 使用量公告</h3>
+                    <p class="change-subtitle">OpenRouter 官方 X 账号发布的新功能分类记录。</p>
+                  </div>
+                  <figure class="brand-source">
+                    <img class="openrouter-logo" width="1024" height="169" alt="OpenRouter" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAyNCIgaGVpZ2h0PSIxNjkiIHZpZXdCb3g9IjAgMCAxMDI0IDE2OSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTE4NS40NCAwQzIxMy4zNzIgMCAyMzYuMDE0IDIyLjY0MzEgMjM2LjAxNCA1MC41NzQ1QzIzNi4wMTQgNzguNTA2IDIxMy4zNzIgMTAxLjE0OSAxODUuNDQgMTAxLjE0OUwyMzUuNjA1IDE1MS4zMTRDMjQxLjk3NyAxNTcuNjg2IDIzNy40NjQgMTY4LjU4MiAyMjguNDUzIDE2OC41ODJIODQuMjkwOEMzNy43MzgzIDE2OC41ODIgMCAxMzAuODQzIDAgODQuMjkwOEMwIDM3LjczODMgMzcuNzM4MyAwIDg0LjI5MDggMEgxODUuNDRaTTg0LjI5MDggMzMuNzE2NEM1Ni4zNTkzIDMzLjcxNjQgMzMuNzE2MyA1Ni4zNTkzIDMzLjcxNjMgODQuMjkwOEMzMy43MTYzIDExMi4yMjIgNTYuMzU5MyAxMzQuODY1IDg0LjI5MDggMTM0Ljg2NUMxMTIuMjIyIDEzNC44NjUgMTM0Ljg2NSAxMTIuMjIyIDEzNC44NjUgODQuMjkwOEMxMzQuODY1IDU2LjM1OTMgMTEyLjIyMiAzMy43MTY0IDg0LjI5MDggMzMuNzE2NFoiIGZpbGw9IiMwMzA4MEEiLz4KPHBhdGggZD0iTTM0NS40MTggNTMuODQ1N0MzNjcuMTQyIDUzLjg0NTcgMzg1LjE3NiA3MC42MDEzIDM4NS4xNzYgOTIuODk0NkMzODUuMTc2IDExNS4zMyAzNjcuNTY5IDEzMi41MTIgMzQ1LjI3NiAxMzIuNTEyQzMyMy40MDggMTMyLjUxMiAzMDUuMjMyIDExNS42MTQgMzA1LjIzMiA5My4xNzg4QzMwNS4yMzIgNzAuNzQzNyAzMjMuNDA4IDUzLjg0NTcgMzQ1LjQxOCA1My44NDU3Wk0zNDUuNDE4IDExNy4xNzZDMzU5LjE5MSAxMTcuMTc2IDM2Ny45OTUgMTA2LjI0MyAzNjcuOTk1IDkzLjE3ODhDMzY3Ljk5NSA4MC4xMTUxIDM1OS4wNDkgNjkuMTgxMiAzNDUuMjc2IDY5LjE4MTJDMzMxLjY0NCA2OS4xODEyIDMyMi41NTYgNzkuODMwOCAzMjIuNTU2IDkyLjg5NDZDMzIyLjU1NiAxMDUuODE3IDMzMS42NDQgMTE3LjE3NiAzNDUuNDE4IDExNy4xNzZaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik00MzMuMjI2IDEzMi4zNzJDNDI3LjQwNSAxMzIuMzcyIDQxNC42MjUgMTI5LjM5IDQwOC42NjEgMTIwLjE2VjE2OC41ODFIMzkxLjc2M1Y1NS40MUg0MDguMjM1VjY3LjE5NTZDNDE0LjYyNSA1Ni44MzAyIDQyNi45NzkgNTMuOTkgNDMzLjY1MyA1My45OUM0NTYuOTQgNTMuOTkgNDcwLjg1NiA3NC4wMTE4IDQ3MC44NTYgOTMuMDM4OUM0NzAuODU2IDExMy42MjggNDU1LjY2MiAxMzIuMzcyIDQzMy4yMjYgMTMyLjM3MlpNNDMxLjA5NiAxMTcuMDM3QzQ0NC43MjkgMTE3LjAzNyA0NTMuODE2IDEwNi4yNDUgNDUzLjgxNiA5My4xODEzQzQ1My44MTYgODAuMTE3NSA0NDQuODcgNjkuMTgzNiA0MzEuMDk2IDY5LjE4MzZDNDE3LjMyMyA2OS4xODM2IDQwOC4zNzcgODAuMTE3NSA0MDguMzc3IDkzLjE4MTNDNDA4LjM3NyAxMDYuMjQ1IDQxNy4zMjMgMTE3LjAzNyA0MzEuMDk2IDExNy4wMzdaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik00OTQuMTU3IDk4LjI5MDZDNDk0LjQ0MiAxMDkuOTM0IDUwNS4yMzMgMTE4LjAyOCA1MTYuMzA4IDExOC4wMjhDNTI1LjUzOCAxMTguMDI4IDUzMi4zNTQgMTE0LjYyIDUzNi43NTcgMTA2LjI0M0w1NDguOTY4IDExNC4zMzZDNTQyLjQzNiAxMjYuNDA1IDUyOS43OTkgMTMyLjY1NCA1MTYuNTkzIDEzMi42NTRDNDk0LjE1NyAxMzIuNjU0IDQ3Ni44MzMgMTE1Ljc1NiA0NzYuODMzIDkzLjE3ODhDNDc2LjgzMyA3MS43MzcxIDQ5My4wMjEgNTMuODQ1NyA1MTUuMDMxIDUzLjg0NTdDNTM4LjYwMiA1My44NDU3IDU1MS45NSA3MC4xNzUyIDU1MS45NSA5My4wMzY1QzU1MS45NSA5My43NDY4IDU1MS45NSA5Ni40NDQ1IDU1MS42NjUgOTguMjkwNkg0OTQuMTU3Wk00OTUuMDA5IDg1LjUxMDZINTM0Ljc2OUM1MzQuMiA3NC43MTkxIDUyNS41MzggNjguMzI5IDUxNS4wMzEgNjguMzI5QzUwNC42NjUgNjguMzI5IDQ5Ni41NzEgNzUuMTQ1MSA0OTUuMDA5IDg1LjUxMDZaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik02MTEuNjIzIDg4Ljc3NjdDNjExLjYyMyA3Ny45ODUyIDYwNi41MTIgNjkuODkxNSA1OTQuODY3IDY5Ljg5MTVDNTg0LjIxOCA2OS44OTE1IDU3Ny40MDIgNzcuNTU5MiA1NzcuNDAyIDg5LjA2MDVWMTMxLjIzNEg1NjAuNTA0VjU1LjQwNzZINTc2Ljk3N1Y2NS42MzEzQzU4NC4yMTggNTUuODMzOCA1OTQuMTU4IDUzLjg0NTcgNjAwLjEyMSA1My44NDU3QzYxOS40MzQgNTMuODQ1NyA2MjguNTIxIDY3LjMzNSA2MjguNTIxIDg0LjUxNjVWMTMxLjIzNEg2MTEuNjIzVjg4Ljc3NjdaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik02ODAuODE5IDcyLjQ0ODdDNjc5LjQgNzIuMTY0NCA2NzYuODQzIDcyLjAyMjYgNjc1Ljk5MiA3Mi4wMjI2QzY2My4wNyA3Mi4wMjI2IDY1Ni4yNTQgNzkuNjkwMyA2NTYuMjU0IDkyLjc1NDFWMTMxLjIzNUg2MzkuMzU2VjU1LjQwOTFINjU1LjgyOVY2Ny40Nzg4QzY2MC41MTQgNTguOTU4OSA2NjguNDY2IDU0LjY5ODcgNjc2LjcwMSA1NC42OTg3QzY3Ny42OTUgNTQuNjk4NyA2NzkuODI1IDU0Ljg0MTIgNjgwLjgxOSA1NS4xMjQ4VjcyLjQ0ODdaIiBmaWxsPSIjMDMwODBBIi8+CjxwYXRoIGQ9Ik03MjIuOTkyIDUzLjg0NTdDNzQ0LjcxNyA1My44NDU3IDc2Mi43NTEgNzAuNjAxMyA3NjIuNzUxIDkyLjg5NDZDNzYyLjc1MSAxMTUuMzMgNzQ1LjE0NCAxMzIuNTEyIDcyMi44NTEgMTMyLjUxMkM3MDAuOTgzIDEzMi41MTIgNjgyLjgwNyAxMTUuNjE0IDY4Mi44MDcgOTMuMTc4OEM2ODIuODA3IDcwLjc0MzcgNzAwLjk4MyA1My44NDU3IDcyMi45OTIgNTMuODQ1N1pNNzIyLjk5MiAxMTcuMTc2QzczNi43NjUgMTE3LjE3NiA3NDUuNTY5IDEwNi4yNDMgNzQ1LjU2OSA5My4xNzg4Qzc0NS41NjkgODAuMTE1MSA3MzYuNjI0IDY5LjE4MTIgNzIyLjg1MSA2OS4xODEyQzcwOS4yMTggNjkuMTgxMiA3MDAuMTMxIDc5LjgzMDggNzAwLjEzMSA5Mi44OTQ2QzcwMC4xMzEgMTA1LjgxNyA3MDkuMjE4IDExNy4xNzYgNzIyLjk5MiAxMTcuMTc2WiIgZmlsbD0iIzAzMDgwQSIvPgo8cGF0aCBkPSJNNzg3LjYzOSA5Ny44NjcxQzc4Ny42MzkgMTA4LjY1OSA3OTIuNzUxIDExNi43NTIgODA0LjM5NSAxMTYuNzUyQzgxNS4wNDQgMTE2Ljc1MiA4MjEuODYgMTA5LjA4NSA4MjEuODYgOTcuNTgyOFY1NS40MTAzSDgzOC43NThWMTMxLjIzNkg4MjIuMjg2VjEyMS4wMTNDODE1LjA0NCAxMzAuODEgODA1LjEwNCAxMzIuNzk4IDc5OS4xNDIgMTMyLjc5OEM3ODAuMTE0IDEzMi43OTggNzcwLjc0MSAxMTkuMzA4IDc3MC43NDEgMTAxLjk4NVY1NS40MTAySDc4Ny42MzlWOTcuODY3MVoiIGZpbGw9IiMwMzA4MEEiLz4KPHBhdGggZD0iTTg3OC44MDUgMTA0LjExM0M4NzguODA1IDExMy40ODUgODgzLjQ5MSAxMTYuNzUgODkxLjg2OSAxMTYuNzVDODkzLjQzMSAxMTYuNzUgODk1LjEzNSAxMTYuNjA5IDg5Ny4yNjUgMTE2LjE4M1YxMzAuNTI0Qzg5NC4yODMgMTMxLjY2IDg5MC4zMDcgMTMyLjA4NiA4ODguMTc3IDEzMi4wODZDODcxLjg0NyAxMzIuMDg2IDg2MS45MDggMTIzLjU2NiA4NjEuOTA4IDEwNi44MTFWNzAuNjAxOEg4NDcuOTkyVjU1LjQwODJIODYxLjkwOFYzMS45Nzg1SDg3OC44MDVWNTUuNDA4Mkg4OTcuNDA3VjcwLjYwMThIODc4LjgwNVYxMDQuMTEzWiIgZmlsbD0iIzAzMDgwQSIvPgo8cGF0aCBkPSJNOTE3LjMxNiA5OC4yOTA2QzkxNy42MDEgMTA5LjkzNCA5MjguMzkyIDExOC4wMjggOTM5LjQ2OCAxMTguMDI4Qzk0OC42OTcgMTE4LjAyOCA5NTUuNTEzIDExNC42MiA5NTkuOTE2IDEwNi4yNDNMOTcyLjEyNyAxMTQuMzM2Qzk2NS41OTUgMTI2LjQwNSA5NTIuOTU4IDEzMi42NTQgOTM5Ljc1MiAxMzIuNjU0QzkxNy4zMTYgMTMyLjY1NCA4OTkuOTkzIDExNS43NTYgODk5Ljk5MyA5My4xNzg4Qzg5OS45OTMgNzEuNzM3MSA5MTYuMTggNTMuODQ1NyA5MzguMTkgNTMuODQ1N0M5NjEuNzYxIDUzLjg0NTcgOTc1LjEwOSA3MC4xNzUyIDk3NS4xMDkgOTMuMDM2NUM5NzUuMTA5IDkzLjc0NjggOTc1LjEwOSA5Ni40NDQ1IDk3NC44MjUgOTguMjkwNkg5MTcuMzE2Wk05MTguMTY4IDg1LjUxMDZIOTU3LjkyOEM5NTcuMzU5IDc0LjcxOTEgOTQ4LjY5NyA2OC4zMjkgOTM4LjE5IDY4LjMyOUM5MjcuODI0IDY4LjMyOSA5MTkuNzMxIDc1LjE0NTEgOTE4LjE2OCA4NS41MTA2WiIgZmlsbD0iIzAzMDgwQSIvPgo8cGF0aCBkPSJNMTAyNCA3Mi40NDg3QzEwMjIuNTggNzIuMTY0NCAxMDIwLjAyIDcyLjAyMjYgMTAxOS4xNyA3Mi4wMjI2QzEwMDYuMjUgNzIuMDIyNiA5OTkuNDM0IDc5LjY5MDMgOTk5LjQzNCA5Mi43NTQxVjEzMS4yMzVIOTgyLjUzNlY1NS40MDkxSDk5OS4wMDhWNjcuNDc4OEMxMDAzLjY5IDU4Ljk1ODkgMTAxMS42NSA1NC42OTg3IDEwMTkuODggNTQuNjk4N0MxMDIwLjg4IDU0LjY5ODcgMTAyMyA1NC44NDEyIDEwMjQgNTUuMTI0OFY3Mi40NDg3WiIgZmlsbD0iIzAzMDgwQSIvPgo8L3N2Zz4K">
+                    <figcaption>X，@OpenRouter</figcaption>
+                  </figure>
+                </div>
+                <dl class="change-meta">
+                  <div class="meta-cell"><dt>核对状态</dt><dd class="confirmed-text">confirmed</dd></div>
+                  <div class="meta-cell"><dt>分组</dt><dd>A 组 / OpenRouter</dd></div>
+                  <div class="meta-cell"><dt>检测时间（北京时间）</dt><dd>2026-11-12 22:59</dd></div>
+                  <div class="meta-cell"><dt>变动类型</dt><dd>新功能</dd></div>
+                </dl>
+                <div class="change-actions">
+                  <a class="source-link" href="https://x.com/OpenRouter/status/2120569774124200265" target="_blank" rel="noopener noreferrer">
+                    <span>打开 X 原文</span><span aria-hidden="true">↗</span>
+                  </a>
+                  <button class="review-btn" type="button" aria-pressed="false">标记本次核对</button>
+                  <div class="source-url">x.com/OpenRouter/status/2120569774124200265</div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="empty-state" id="empty-state" hidden>
+            <strong>当前筛选下无可匹配记录</strong>
+            <p id="empty-message">当前两条已确认变动均属于 A 组 OpenRouter；其他分组当前没有可显示的已确认变动。</p>
+          </div>
+          <div class="filter-announcement" id="filter-announcement" aria-live="polite">全部监测对象，全部变动类型，显示 2 条已确认变动</div>
+        </section>
+      </div>
+
+      <aside class="side-column" aria-label="监测覆盖与口径">
+        <section class="side-section" aria-labelledby="coverage-title">
+          <div class="side-heading">
+            <span class="section-kicker">Coverage / 26 targets</span>
+            <h2 id="coverage-title">四组监测覆盖</h2>
+          </div>
+          <div class="coverage-grid">
+            <div class="coverage-cell" data-coverage-group="A">
+              <div class="coverage-letter">GROUP A</div>
+              <strong class="coverage-number">8</strong><span class="coverage-unit">个对象</span>
+            </div>
+            <div class="coverage-cell" data-coverage-group="B">
+              <div class="coverage-letter">GROUP B</div>
+              <strong class="coverage-number">8</strong><span class="coverage-unit">个对象</span>
+            </div>
+            <div class="coverage-cell" data-coverage-group="C">
+              <div class="coverage-letter">GROUP C</div>
+              <strong class="coverage-number">4</strong><span class="coverage-unit">个对象</span>
+            </div>
+            <div class="coverage-cell" data-coverage-group="D">
+              <div class="coverage-letter">GROUP D</div>
+              <strong class="coverage-number">6</strong><span class="coverage-unit">个对象</span>
+            </div>
+          </div>
+          <div class="coverage-total">合计 26 个监测对象</div>
+        </section>
+
+        <section class="side-section" aria-labelledby="collection-title">
+          <div class="side-heading">
+            <span class="section-kicker">Collection / Current database</span>
+            <h2 id="collection-title">采集与核对状态</h2>
+          </div>
+          <dl class="collection-list">
+            <div class="collection-row"><dt>当前快照</dt><dd>25 <span>条</span></dd></div>
+            <div class="collection-row"><dt>有效变动</dt><dd>2 <span>条</span></dd></div>
+            <div class="collection-row"><dt>待核对 pending</dt><dd>0 <span>条</span></dd></div>
+          </dl>
+          <p class="pending-note">当前没有 pending 记录；两条有效变动均为 confirmed。</p>
+        </section>
+
+        <section class="side-section" aria-labelledby="price-title">
+          <div class="side-heading">
+            <span class="section-kicker">Price note / No fabrication</span>
+            <h2 id="price-title">价格数据口径</h2>
+          </div>
+          <div class="price-note">
+            <span class="price-label">302.AI 类对象，价格暂缺</span>
+            <p>当前配置未提供可用价格数据，不生成价格变动。</p>
+            <p class="fine-print">暂无已入库价格变动，仅描述当前数据库，不代表竞品本月没有价格变化。</p>
+          </div>
+        </section>
+
+        <section class="side-section" aria-labelledby="method-title">
+          <div class="side-heading">
+            <span class="section-kicker">Method / Reading notes</span>
+            <h2 id="method-title">阅读与追溯说明</h2>
+          </div>
+          <ul class="method-list">
+            <li>本页仅呈现当前数据库已入库内容，不补造价格、营销数字或预警。</li>
+            <li>两条记录均属 A 组 OpenRouter，检测时间均为北京时间 2026-11-12 22:59。</li>
+            <li>原文链接是每条变动的核心证据入口；本地核对仅在当前页面生效。</li>
+          </ul>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <section class="source-notes" aria-labelledby="source-notes-title">
+        <div class="source-notes-heading">
+          <span>Source notes / Original records</span>
+          <h2 id="source-notes-title">原文索引</h2>
+        </div>
+        <div class="source-note-list">
+          <div class="source-note">
+            <strong><span>X 原文</span>Gemini Decision 1</strong>
+            <a href="https://x.com/OpenRouter/status/2120583084005605816" target="_blank" rel="noopener noreferrer">x.com/OpenRouter/status/2120583084005605816 ↗</a>
+          </div>
+          <div class="source-note">
+            <strong><span>X 原文</span>MAI Transcribe 2</strong>
+            <a href="https://x.com/OpenRouter/status/2120569774124200265" target="_blank" rel="noopener noreferrer">x.com/OpenRouter/status/2120569774124200265 ↗</a>
+          </div>
+        </div>
+      </section>
+      <div class="footer-line">
+        <span>API 监测台，当前窗口 2026-11-12 08:00—2026-11-13 08:00</span>
+        <span>OpenRouter 标志：官方 horizontal-ink SVG，base64 内嵌</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const groupButtons = [...document.querySelectorAll('[data-group-filter]')];
+      const coverageCells = [...document.querySelectorAll('[data-coverage-group]')];
+      const changeItems = [...document.querySelectorAll('.change-item')];
+      const typeFilter = document.getElementById('type-filter');
+      const resultCount = document.getElementById('result-count');
+      const reviewCount = document.getElementById('review-count');
+      const emptyState = document.getElementById('empty-state');
+      const emptyMessage = document.getElementById('empty-message');
+      const announcement = document.getElementById('filter-announcement');
+      const groupNames = { all: '全部监测对象', A: 'A 组，8 个对象', B: 'B 组，8 个对象', C: 'C 组，4 个对象', D: 'D 组，6 个对象' };
+      const typeNames = { all: '全部变动类型', announcement: 'X 公告', feature: '新功能' };
+      let activeGroup = 'all';
+
+      function applyFilters() {
+        const activeType = typeFilter.value;
+        let visibleCount = 0;
+        changeItems.forEach((item) => {
+          const groupMatches = activeGroup === 'all' || item.dataset.group === activeGroup;
+          const typeMatches = activeType === 'all' || item.dataset.type === activeType;
+          const visible = groupMatches && typeMatches;
+          item.hidden = !visible;
+          if (visible) visibleCount += 1;
+        });
+        resultCount.textContent = String(visibleCount);
+        emptyState.hidden = visibleCount !== 0;
+        announcement.textContent = `${groupNames[activeGroup]}，${typeNames[activeType]}，显示 ${visibleCount} 条已确认变动`;
+        if (visibleCount === 0 && activeGroup !== 'all') {
+          emptyMessage.textContent = `${groupNames[activeGroup]}。当前两条已确认变动均属于 A 组 OpenRouter，本组当前没有可显示的已确认变动。`;
+        } else if (visibleCount === 0) {
+          emptyMessage.textContent = '当前类型下没有已确认变动；这不代表该时间窗之外没有变动。';
+        }
+      }
+
+      groupButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          activeGroup = button.dataset.groupFilter;
+          groupButtons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+          coverageCells.forEach((cell) => cell.classList.toggle('active', cell.dataset.coverageGroup === activeGroup));
+          applyFilters();
+        });
+      });
+      typeFilter.addEventListener('change', applyFilters);
+
+      document.querySelectorAll('.review-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+          const checked = button.getAttribute('aria-pressed') !== 'true';
+          button.setAttribute('aria-pressed', String(checked));
+          button.textContent = checked ? '本次已核对 ✓' : '标记本次核对';
+          const totalChecked = document.querySelectorAll('.review-btn[aria-pressed="true"]').length;
+          reviewCount.textContent = String(totalChecked);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
