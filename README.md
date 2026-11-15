@@ -14,7 +14,17 @@ FastAPI + SQLite 的竞品动态采集、预警核对和手动 Markdown 周报/�
 
 ## 安装
 
-需要 Python 3.11+。在 Windows Git Bash 中：
+需要 Python 3.11+。
+
+### macOS 一键启动
+
+```bash
+bash start_mac.sh
+```
+
+脚本会创建虚拟环境、安装依赖、复制 `.env.example`、初始化数据库，并在首次运行时导入演示数据，随后打开 `http://127.0.0.1:8000/changes`。需要真实采集时，编辑 `.env` 补全密钥后重新执行同一命令；已有 `.env` 和数据库不会被覆盖。按 `Ctrl+C` 停止。
+
+### Windows Git Bash
 
 ```bash
 cd /d/daily_update/ai-api-monitor
