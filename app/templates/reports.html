@@ -1,29 +1,54 @@
 {% extends "base.html" %}
-{% block title %}手动报告 · 竞品监测{% endblock %}
+{% block title %}报告中心 · API 监测台{% endblock %}
+{% block page_title %}手动报告值班台{% endblock %}
+{% block page_description %}按需生成近 7 天、近 30 天或自定义日期报告。报告保存到数据库，可随时回看。{% endblock %}
+{% block header_meta %}<div class="window-card"><div><span>历史报告</span><strong>{{ report_count }} 份</strong></div><div><span>调度方式</span><strong>手动生成</strong></div></div>{% endblock %}
 {% block content %}
-<h1>手动周报 / 月报</h1>
-<p>报告按北京时间生成并保存，历史报告可随时回看。</p>
-{% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form class="preset-actions" method="post" action="/reports">
-  <button type="submit" name="preset" value="7">生成近 7 天（周报）</button>
-  <button type="submit" name="preset" value="30">生成近 30 天（月报）</button>
-</form>
-<form class="filters" method="post" action="/reports">
-  <input type="hidden" name="preset" value="custom">
-  <label>开始日期（含）<input type="date" name="start_date" required></label>
-  <label>结束日期（含）<input type="date" name="end_date" required></label>
-  <button type="submit">生成自定义报告</button>
-</form>
-<h2>历史报告</h2>
-{% if reports %}
-<table>
-  <thead><tr><th>生成时间（北京）</th><th>报告</th><th>类型</th><th>统计窗口（北京）</th></tr></thead>
-  <tbody>{% for report in reports %}<tr>
-    <td>{{ report.generated_at|bj }}</td>
-    <td><a href="/reports/{{ report.id }}">{{ report.title or "历史报告（旧版）" }}</a></td>
-    <td>{{ kind_labels.get(report.report_kind, "旧版/未分类") }}</td>
-    <td>{{ report.period_start|bj }} 至 {{ report.period_end|bj }}</td>
-  </tr>{% endfor %}</tbody>
-</table>
-{% else %}<div class="empty">尚未生成报告</div>{% endif %}
+<section class="stats" aria-label="报告概况">
+  <article class="stat confirmed"><span class="stat-label">历史报告</span><strong class="stat-value">{{ report_count }}</strong><span class="stat-unit">份</span><span class="stat-note">存库并可在线回看</span></article>
+  <article class="stat"><span class="stat-label">监测对象</span><strong class="stat-value">{{ target_count }}</strong><span class="stat-unit">个</span><span class="stat-note">报告按实际变动统计</span></article>
+  <article class="stat"><span class="stat-label">已确认变动</span><strong class="stat-value">{{ confirmed_count }}</strong><span class="stat-unit">条</span><span class="stat-note">误报不进入变动明细</span></article>
+  <article class="stat attention"><span class="stat-label">待核对</span><strong class="stat-value">{{ pending_count }}</strong><span class="stat-unit">条</span><span class="stat-note">pending 会明确标注</span></article>
+</section>
+
+{% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+<div class="workspace">
+  <div>
+    <section class="panel">
+      <div class="panel-head"><div><h2>生成报告</h2><p>预设窗口以当前北京时间向前计算，自定义日期包含结束日期全天</p></div></div>
+      <div class="panel-body">
+        <div class="preset-grid">
+          <article class="preset-card"><h3>近 7 天 · 周报</h3><p>汇总最近 7×24 小时内的价格、模型、功能、营销和预警落地情况。</p><form method="post" action="/reports"><button class="button primary full" type="submit" name="preset" value="7">生成近 7 天（周报）</button></form></article>
+          <article class="preset-card"><h3>近 30 天 · 月报</h3><p>汇总最近 30×24 小时变动，适合回顾完整月度监测窗口。</p><form method="post" action="/reports"><button class="button primary full" type="submit" name="preset" value="30">生成近 30 天（月报）</button></form></article>
+        </div>
+      </div>
+      <form class="filters custom-form" method="post" action="/reports">
+        <input type="hidden" name="preset" value="custom">
+        <div class="field grow"><label for="start-date">开始日期（含）</label><input id="start-date" type="date" name="start_date" required></div>
+        <div class="field grow"><label for="end-date">结束日期（含）</label><input id="end-date" type="date" name="end_date" required></div>
+        <div class="filter-actions"><button class="button" type="submit">生成自定义报告</button></div>
+      </form>
+    </section>
+
+    <section class="panel section-panel">
+      <div class="panel-head"><div><h2>历史报告</h2><p>按生成时间倒序，点击标题进入在线详情</p></div><span class="count-label">saved / {{ reports|length }}</span></div>
+      {% if reports %}
+      <div class="table-wrap"><table class="data-table history-table"><thead><tr><th>生成时间（北京）</th><th>报告</th><th>类型</th><th>统计窗口（北京）</th></tr></thead><tbody>{% for report in reports %}<tr><td class="mono" data-label="生成时间（北京）">{{ report.generated_at|bj }}</td><td class="report-list-title" data-label="报告"><a href="/reports/{{ report.id }}">{{ report.title or "历史报告（旧版）" }}</a></td><td data-label="类型"><span class="badge">{{ kind_labels.get(report.report_kind, "旧版/未分类") }}</span></td><td class="mono" data-label="统计窗口（北京）">{{ report.period_start|bj }}<br>至 {{ report.period_end|bj }}</td></tr>{% endfor %}</tbody></table></div>
+      {% else %}<div class="empty-state"><strong>尚未生成报告</strong><p>选择上方任意时间范围即可生成第一份报告。</p></div>{% endif %}
+    </section>
+  </div>
+
+  <aside class="side-rail">
+    <section class="panel side-panel"><h2>固定报告结构</h2><div class="side-rows"><div class="side-row"><span>概览</span><strong>01</strong></div><div class="side-row"><span>价格变动</span><strong>02</strong></div><div class="side-row"><span>新模型与下线</span><strong>03</strong></div><div class="side-row"><span>功能与营销</span><strong>04</strong></div><div class="side-row"><span>预警回顾</span><strong>05</strong></div></div><p>无数据板块保留标题并写“本期无”。</p></section>
+    <section class="panel side-panel">
+      <h2>采集调度</h2>
+      <p>网站数据源每 {{ site_collection_hours }} 小时更新一次。</p>
+      <form class="schedule-form" method="post" action="/settings/site-collection">
+        <div class="field"><label for="site-hours">更新频率（UTC+8）</label><select id="site-hours" name="hours">{% for hours in [6, 12, 24] %}<option value="{{ hours }}" {% if site_collection_hours == hours %}selected{% endif %}>每 {{ hours }} 小时</option>{% endfor %}</select></div>
+        <button class="button primary full" type="submit">保存更新频率</button>
+      </form>
+      <div class="side-note"><strong>执行时间：{{ site_collection_times }}</strong>以北京时间 08:00 为基点。X 仍每 2 小时采集；报告保持手动生成。</div>
+    </section>
+  </aside>
+</div>
 {% endblock %}

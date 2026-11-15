@@ -3,36 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}竞品监测{% endblock %}</title>
-  <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; color: #1f2937; background: #f8fafc; }
-    header { background: #0f172a; padding: 16px 24px; }
-    header a { color: #e2e8f0; margin-right: 20px; text-decoration: none; }
-    main { max-width: 1280px; margin: 24px auto; padding: 0 16px; }
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
-    th { background: #f1f5f9; white-space: nowrap; }
-    form.filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 16px; }
-    label { display: grid; gap: 4px; font-size: 13px; }
-    select, button, input { padding: 7px 10px; }
-    button { cursor: pointer; }
-    .badge { display: inline-block; padding: 2px 7px; border-radius: 4px; background: #e2e8f0; font-size: 12px; }
-    .high { background: #fee2e2; color: #991b1b; }
-    .medium { background: #fef3c7; color: #92400e; }
-    .low { background: #dcfce7; color: #166534; }
-    .summary { min-width: 280px; white-space: pre-wrap; word-break: break-word; }
-    .actions, .preset-actions { display: flex; gap: 8px; }
-    .preset-actions { margin-bottom: 20px; }
-    .empty { padding: 32px; background: white; text-align: center; }
-    .error { padding: 12px; background: #fee2e2; color: #991b1b; }
-    .report-content { padding: 24px; background: white; line-height: 1.7; overflow-x: auto; }
-    .report-content table { margin: 12px 0 24px; }
-    .report-content blockquote { margin-left: 0; padding-left: 12px; border-left: 3px solid #f59e0b; }
-    .markdown-source { white-space: pre-wrap; word-break: break-word; }
-  </style>
+  <title>{% block title %}API 监测台{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/monitor.css') }}">
 </head>
 <body>
-<header><nav><a href="/changes">变动记录</a><a href="/review">人工核对</a><a href="/reports">报告</a></nav></header>
-<main>{% block content %}{% endblock %}</main>
+  <aside class="sidebar" aria-label="主导航">
+    <a class="brand" href="/changes" style="color:inherit;text-decoration:none">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span><span class="brand-name">API 监测台</span><span class="brand-sub">上游变动值守</span></span>
+    </a>
+    <p class="nav-label">工作区</p>
+    <nav class="nav-list">
+      <a class="nav-link{% if active_nav == 'changes' %} active{% endif %}" href="/changes" {% if active_nav == 'changes' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg>
+        变动记录 <span class="nav-dot" aria-hidden="true"></span>
+      </a>
+      <a class="nav-link{% if active_nav == 'review' %} active{% endif %}" href="/review" {% if active_nav == 'review' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11"/></svg>
+        人工核对
+      </a>
+      <a class="nav-link{% if active_nav == 'reports' %} active{% endif %}" href="/reports" {% if active_nav == 'reports' %}aria-current="page"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17H5V4a1 1 0 0 1 1-1z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
+        报告中心
+      </a>
+    </nav>
+    <section class="side-summary" aria-label="本地数据概况">
+      <h2>本地值守 · 北京时间</h2>
+      <div class="side-stat"><span>监测对象</span><strong>{{ target_count }}</strong></div>
+      <div class="side-stat"><span>当前快照</span><strong>{{ snapshot_count }}</strong></div>
+      <div class="side-stat"><span>待核对</span><strong>{{ pending_count }}</strong></div>
+    </section>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="duty-state"><span class="state-light" aria-hidden="true"></span>本地值勤视图</div>
+      <div class="topbar-meta"><span>北京时间：UTC+8</span><span class="cutoff">当前 <strong>{{ current_bj }}</strong></span></div>
+    </header>
+    <div class="content">
+      <section class="page-heading">
+        <div>
+          <h1>{% block page_title %}竞品监测{% endblock %}</h1>
+          <p>{% block page_description %}所有数字仅来自当前数据库，原始证据入口保留。{% endblock %}</p>
+        </div>
+        {% block header_meta %}{% endblock %}
+      </section>
+      {% block content %}{% endblock %}
+    </div>
+  </main>
 </body>
 </html>

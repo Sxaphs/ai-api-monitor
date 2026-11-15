@@ -12,6 +12,7 @@ from .seed import seed_targets
 from .services.history_import import import_history
 from .services.migration import apply_migration, migration_report
 from .services.reports import ReportService, recent_report_window
+from .services.summaries import ReportSummarizer
 from .time_utils import BEIJING, parse_datetime
 
 
@@ -83,7 +84,7 @@ def main() -> None:
             )
             report_kind = "custom"
         with SessionLocal() as session:
-            report = ReportService(session).generate(
+            report = ReportService(session, summarizer=ReportSummarizer()).generate(
                 start, end, title=title, report_kind=report_kind
             )
             print(report.content, end="")

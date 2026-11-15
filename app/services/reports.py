@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -48,10 +49,15 @@ def _review_suffix(change: Change) -> str:
     return "（待人工核对）" if change.verify_status == "pending" else ""
 
 
+def _inline_text(value: object) -> str:
+    """推文等多行文本进入 Markdown 列表前统一折叠为单行。"""
+    return " ".join(str(value).split())
+
+
 def _cell(value: str | None) -> str:
     if value is None or value == "":
         return "未披露"
-    return " ".join(str(value).split()).replace("|", "\\|")
+    return _inline_text(value).replace("|", "\\|")
 
 
 def _valid_landing(warning: Change, end: datetime) -> Change | None:
@@ -69,9 +75,13 @@ def _valid_landing(warning: Change, end: datetime) -> Change | None:
     return confirmed
 
 
+logger = logging.getLogger(__name__)
+
+
 class ReportService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, summarizer=None) -> None:
         self.session = session
+        self.summarizer = summarizer
 
     def generate(
         self,
@@ -169,7 +179,7 @@ class ReportService:
                 for change in sorted(model_groups[target_name], key=lambda item: ensure_utc(item.detected_at)):
                     lines.append(
                         f"- **{change.change_type}**（{_local(change.detected_at, date_only=True)}）："
-                        f"{change.summary}{_review_suffix(change)}；{_link('原文', change.source_url)}"
+                        f"{_inline_text(change.summary)}{_review_suffix(change)}；{_link('原文', change.source_url)}"
                     )
                 lines.append("")
         else:
@@ -184,7 +194,7 @@ class ReportService:
             for change, target in activity_rows:
                 lines.append(
                     f"- **{target.name}｜{change.change_type}**"
-                    f"（{_local(change.detected_at, date_only=True)}）：{change.summary}"
+                    f"（{_local(change.detected_at, date_only=True)}）：{_inline_text(change.summary)}"
                     f"{_review_suffix(change)}；{_link('原文', change.source_url)}"
                 )
         else:
@@ -202,7 +212,8 @@ class ReportService:
                     landed, key=lambda row: ensure_utc(row[0].detected_at)
                 ):
                     lines.append(
-                        f"- **{target.name}**：预警「{warning.summary}」→ 落地「{confirmed_change.summary}」；"
+                        f"- **{target.name}**：预警「{_inline_text(warning.summary)}」→ "
+                        f"落地「{_inline_text(confirmed_change.summary)}」；"
                         f"{_link('预警原文', warning.source_url)} / "
                         f"{_link('落地原文', confirmed_change.source_url)}"
                     )
@@ -210,6 +221,15 @@ class ReportService:
                 lines.extend(["", "本期无已落地预警"])
         else:
             lines.append("本期无")
+
+        if self.summarizer is not None:
+            factual_content = "\n".join(lines).rstrip() + "\n"
+            try:
+                summary = self.summarizer.summarize(factual_content)
+            except Exception:
+                logger.exception("模型总结生成失败，继续保存原始统计报告")
+                summary = "模型总结生成失败，请检查 LLM 配置与网络；下方为原始统计数据。"
+            lines = lines[:4] + ["## 【模型总结】", "", summary, ""] + lines[4:]
 
         content = "\n".join(lines).rstrip() + "\n"
         report = Report(

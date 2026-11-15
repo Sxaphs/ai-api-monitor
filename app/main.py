@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .db import SessionLocal, init_db
@@ -29,6 +31,7 @@ def create_app(
             with SessionLocal() as session:
                 seed_targets(session)
         scheduler = create_scheduler(SessionLocal) if scheduler_enabled else None
+        app.state.scheduler = scheduler
         if scheduler:
             scheduler.start()
         try:
@@ -36,8 +39,15 @@ def create_app(
         finally:
             if scheduler:
                 scheduler.shutdown(wait=False)
+            app.state.scheduler = None
 
     app = FastAPI(title="AI API 中转站竞品监测系统", version="1.0.0", lifespan=lifespan)
+    app.state.scheduler = None
+    app.mount(
+        "/static",
+        StaticFiles(directory=str(Path(__file__).parent / "static")),
+        name="static",
+    )
     app.include_router(router)
     return app
 

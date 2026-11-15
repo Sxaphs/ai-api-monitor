@@ -4,11 +4,11 @@ FastAPI + SQLite 的竞品动态采集、预警核对和手动 Markdown 周报/�
 
 ## 功能
 
-- 正规军竞品、野路子竞品的定价页和公开模型列表：每 6 小时采集，保留原文快照，与上一次成功且可解析的快照比较。
+- 正规军竞品、野路子竞品的定价页和公开模型列表：保留原文快照，与上一次成功且可解析的快照比较；`/reports` 页面可选择每 6/12/24 小时采集，按北京时间 08:00 对齐并持久化保存。
 - 正规军竞品、上游供应商的 X 时间线：每 2 小时采集，只保留启用当天后的原创推文，不翻历史游标，按推文 ID 去重。
 - 价格、模型、功能、营销分类；预告信号分级；14 天内预警与落地变动自动关联。
 - `/changes` 变动筛选、`/review` 人工确认/误报；targets 的增删改和启停通过 JSON API 完成。
-- `/reports` 手动生成近 7 天周报、近 30 天月报或自定义日期报告，固定五节结构，存入 `reports` 表并支持历史回看；无每日报告调度。
+- `/reports` 手动生成近 7 天周报、近 30 天月报或自定义日期报告；先调用 OpenAI 兼容模型生成“模型总结”，后接固定五节客观统计，存库并支持历史回看；无每日报告调度。
 
 首次成功采集只建立基线，不产生 diff。失败快照不会成为 diff 基准；野路子竞品失败只写日志和快照，不生成预警。
 
@@ -39,7 +39,7 @@ cp .env.example .env
 RAPIDAPI_KEY=你的_RapidAPI_密钥
 SILICONFLOW_KEY=你的_SiliconFlow_密钥
 
-# AiHubMix / SiliconFlow / API2D 定价提取使用 OpenAI 兼容协议
+# 定价提取与报告模型总结共用 OpenAI 兼容协议
 LLM_BASE_URL=https://api.deepseek.com/v1
 LLM_MODEL=deepseek-chat
 LLM_API_KEY=你的_LLM_密钥
@@ -51,7 +51,7 @@ LOG_LEVEL=INFO
 PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers
 ```
 
-没有 `RAPIDAPI_KEY` 时，X 采集会记录失败快照，不影响网站采集。没有 `LLM_API_KEY` 时，三个 LLM 定价对象和 SiliconFlow 页面兜底会明确报错；不会改用写死解析或模拟结果。密钥只从环境读取，不要写入 Python、种子数据或日志。
+没有 `RAPIDAPI_KEY` 时，X 采集会记录失败快照，不影响网站采集。没有 `LLM_API_KEY` 时，三个 LLM 定价对象和 SiliconFlow 页面兜底会明确报错；报告仍会保存，但“模型总结”会明确标注生成失败，不会编造摘要。密钥只从环境读取，不要写入 Python、种子数据或日志。
 
 默认 `http` 采集不需要浏览器。把某个对象的 `collect_method` 设为 `playwright` 前，安装 Chromium：
 

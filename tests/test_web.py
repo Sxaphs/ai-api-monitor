@@ -9,9 +9,16 @@ from app.collectors.twitter import TwitterCollector
 from app.db import get_db
 from app.main import create_app
 from app.models import Change, Report, Target
+from app.scheduler import create_scheduler, get_site_collection_hours
 from app.services.changes import add_change
+from app.web import get_report_summarizer
 
 UTC = timezone.utc
+
+
+class StubSummarizer:
+    def summarize(self, content):
+        return "测试模型总结"
 
 
 def make_client(session_factory):
@@ -22,16 +29,19 @@ def make_client(session_factory):
             yield session
 
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_report_summarizer] = lambda: StubSummarizer()
     return TestClient(app)
 
 
 def test_review_confirm_false_alarm_and_filters(session_factory, session):
     target = Target(name="web-target", group_code="A")
     other = Target(name="other-target", group_code="B")
-    session.add_all([target, other])
+    price_target = Target(name="price-target", group_code="A")
+    session.add_all([target, other, price_target])
     session.commit()
     first = add_change(session, target=target, snapshot=None, change_type="新功能", summary="待确认的唯一摘要", signal_type="warning")
     second = add_change(session, target=other, snapshot=None, change_type="营销活动", summary="待误报的唯一摘要", signal_type="warning")
+    add_change(session, target=price_target, snapshot=None, change_type="涨价", summary="价格配色测试", old_value="1", new_value="2")
     session.commit()
     client = make_client(session_factory)
 
@@ -39,6 +49,11 @@ def test_review_confirm_false_alarm_and_filters(session_factory, session):
     assert response.status_code == 200
     assert "待确认的唯一摘要" in response.text
     assert "待误报的唯一摘要" in response.text
+    all_changes = client.get("/changes")
+    assert 'class="record event-feature"' in all_changes.text
+    assert 'class="record event-marketing"' in all_changes.text
+    assert 'class="record event-price"' in all_changes.text
+    assert 'badge event-badge price">涨价' in all_changes.text
     assert client.post(f"/review/{first.id}/confirm", follow_redirects=False).status_code == 303
     assert client.post(f"/review/{second.id}/false-alarm", follow_redirects=False).status_code == 303
     session.expire_all()
@@ -88,6 +103,7 @@ def test_manual_weekly_monthly_custom_reports_and_history(session_factory, sessi
     detail = client.get(weekly.headers["location"])
     assert detail.status_code == 200
     assert "【本期概览】" in detail.text and "【预警回顾】" in detail.text
+    assert "【模型总结】" in detail.text and "测试模型总结" in detail.text
     assert "本期无" in detail.text
 
     monthly = client.post("/reports", data={"preset": "30"}, follow_redirects=False)
@@ -125,3 +141,21 @@ def test_report_detail_escapes_raw_html(session_factory, session):
     assert response.status_code == 200
     assert "<script>alert('xss')</script>" not in response.text
     assert "&lt;script&gt;" in response.text
+
+
+def test_site_collection_frequency_is_saved_and_rescheduled(session_factory):
+    client = make_client(session_factory)
+    scheduler = create_scheduler(session_factory)
+    client.app.state.scheduler = scheduler
+
+    response = client.post(
+        "/settings/site-collection", data={"hours": "12"}, follow_redirects=False
+    )
+    assert response.status_code == 303
+    with session_factory() as session:
+        assert get_site_collection_hours(session) == 12
+    assert "hour='8,20'" in str(scheduler.get_job("collect-sites").trigger)
+    page = client.get("/reports")
+    assert "网站数据源每 12 小时更新一次" in page.text
+    assert "08:00 / 20:00" in page.text
+    assert client.post("/settings/site-collection", data={"hours": "5"}).status_code == 422

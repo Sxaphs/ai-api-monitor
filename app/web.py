@@ -9,15 +9,22 @@ import markdown
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .db import get_db
 from .models import Change, Report, Snapshot, Target
 from .schemas import TargetCreate, TargetUpdate
+from .scheduler import (
+    get_site_collection_hours,
+    set_site_collection_hours,
+    site_collection_times,
+    site_collection_trigger,
+)
 from .services.migration import llm_usage_by_day
 from .services.reports import ReportService, recent_report_window
+from .services.summaries import ReportSummarizer
 from .time_utils import BEIJING, ensure_utc, utc_now
 
 router = APIRouter()
@@ -25,6 +32,38 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.filters["bj"] = lambda value: ensure_utc(value).astimezone(BEIJING).strftime("%Y-%m-%d %H:%M")
 CHANGE_TYPES = ("涨价", "降价", "新模型", "模型下线", "新功能", "营销活动", "口径变化", "X公告", "价格变动", "提取分歧")
 URL_FIELDS = {"website_url", "pricing_url", "models_url", "models_fallback_url", "changelog_url"}
+
+
+def _base_context(session: Session) -> dict:
+    group_counts = dict(
+        session.execute(
+            select(Target.group_code, func.count(Target.id)).group_by(Target.group_code)
+        ).all()
+    )
+    site_hours = get_site_collection_hours(session)
+    return {
+        "target_count": session.scalar(select(func.count(Target.id))) or 0,
+        "enabled_target_count": session.scalar(
+            select(func.count(Target.id)).where(Target.enabled.is_(True))
+        ) or 0,
+        "snapshot_count": session.scalar(select(func.count(Snapshot.id))) or 0,
+        "confirmed_count": session.scalar(
+            select(func.count(Change.id)).where(Change.verify_status == "confirmed")
+        ) or 0,
+        "pending_count": session.scalar(
+            select(func.count(Change.id)).where(Change.verify_status == "pending")
+        ) or 0,
+        "high_pending_count": session.scalar(
+            select(func.count(Change.id)).where(
+                Change.verify_status == "pending", Change.severity == "high"
+            )
+        ) or 0,
+        "report_count": session.scalar(select(func.count(Report.id))) or 0,
+        "group_counts": group_counts,
+        "site_collection_hours": site_hours,
+        "site_collection_times": site_collection_times(site_hours),
+        "current_bj": ensure_utc(utc_now()).astimezone(BEIJING).strftime("%Y-%m-%d %H:%M"),
+    }
 
 
 def _validate_urls(values: dict) -> None:
@@ -65,6 +104,8 @@ def changes_page(
         request=request,
         name="changes.html",
         context={
+            **_base_context(session),
+            "active_nav": "changes",
             "rows": rows,
             "group": group,
             "change_type": change_type,
@@ -87,7 +128,12 @@ def review_page(request: Request, session: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request=request,
         name="review.html",
-        context={"rows": rows, "group_labels": GROUP_LABELS},
+        context={
+            **_base_context(session),
+            "active_nav": "review",
+            "rows": rows,
+            "group_labels": GROUP_LABELS,
+        },
     )
 
 
@@ -138,6 +184,8 @@ def _reports_page(
         request=request,
         name="reports.html",
         context={
+            **_base_context(session),
+            "active_nav": "reports",
             "reports": reports,
             "error": error,
             "kind_labels": REPORT_KIND_LABELS,
@@ -151,8 +199,16 @@ def reports_page(request: Request, session: Session = Depends(get_db)):
     return _reports_page(request, session)
 
 
+def get_report_summarizer() -> ReportSummarizer:
+    return ReportSummarizer()
+
+
 @router.post("/reports", include_in_schema=False)
-async def generate_report(request: Request, session: Session = Depends(get_db)):
+async def generate_report(
+    request: Request,
+    session: Session = Depends(get_db),
+    summarizer: ReportSummarizer = Depends(get_report_summarizer),
+):
     form = await request.form()
     preset = str(form.get("preset") or "custom")
     try:
@@ -173,7 +229,7 @@ async def generate_report(request: Request, session: Session = Depends(get_db)):
             report_kind = "custom"
         else:
             raise ValueError("未知的报告时间范围")
-        report = ReportService(session).generate(
+        report = ReportService(session, summarizer=summarizer).generate(
             start, end, title=title, report_kind=report_kind
         )
     except ValueError as exc:
@@ -191,8 +247,28 @@ def report_detail(report_id: int, request: Request, session: Session = Depends(g
     return templates.TemplateResponse(
         request=request,
         name="report_detail.html",
-        context={"report": report, "rendered_content": rendered_content},
+        context={
+            **_base_context(session),
+            "active_nav": "reports",
+            "report": report,
+            "rendered_content": rendered_content,
+            "kind_labels": REPORT_KIND_LABELS,
+        },
     )
+
+
+@router.post("/settings/site-collection", include_in_schema=False)
+async def update_site_collection_schedule(request: Request, session: Session = Depends(get_db)):
+    form = await request.form()
+    try:
+        hours = int(str(form.get("hours") or ""))
+        set_site_collection_hours(session, hours)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="网站采集频率仅支持 6、12 或 24 小时") from exc
+    scheduler = request.app.state.scheduler
+    if scheduler is not None:
+        scheduler.reschedule_job("collect-sites", trigger=site_collection_trigger(hours))
+    return RedirectResponse("/reports", status_code=303)
 
 
 @router.get("/api/targets")

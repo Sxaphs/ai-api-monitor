@@ -1,40 +1,112 @@
 {% extends "base.html" %}
-{% block title %}变动记录 · 竞品监测{% endblock %}
+{% block title %}变动记录 · API 监测台{% endblock %}
+{% block page_title %}变动值勤记录{% endblock %}
+{% block page_description %}先扫读变动，再进入原始证据。筛选条件由服务端执行，结果直接来自 changes 表。{% endblock %}
+{% block header_meta %}
+<div class="window-card" aria-label="当前结果概况">
+  <div><span>当前结果</span><strong>{{ rows|length }} 条</strong></div>
+  <div><span>数据截至</span><strong>{{ current_bj }}</strong></div>
+</div>
+{% endblock %}
 {% block content %}
-<h1>变动记录</h1>
-<form class="filters" method="get" action="/changes">
-  <label>分组
-    <select name="group"><option value="">全部</option>{% for value, label in group_labels.items() %}<option value="{{ value }}" {% if group == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-  </label>
-  <label>变动类型
-    <select name="change_type"><option value="">全部</option>{% for value in change_types %}<option value="{{ value }}" {% if change_type == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select>
-  </label>
-  <label>信号类型
-    <select name="signal_type"><option value="">全部</option><option value="confirmed" {% if signal_type == "confirmed" %}selected{% endif %}>confirmed</option><option value="warning" {% if signal_type == "warning" %}selected{% endif %}>warning</option></select>
-  </label>
-  <button type="submit">筛选</button>
-</form>
-{% if rows %}
-<table>
-  <thead><tr><th>检测时间（北京）</th><th>分组 / 对象</th><th>类型</th><th>来源</th><th>摘要</th><th>旧值 → 新值</th><th>幅度</th><th>信号 / 级别</th><th>核对</th></tr></thead>
-  <tbody>{% for change, target in rows %}<tr>
-    <td>{{ change.detected_at|bj }}</td>
-    <td>{{ group_labels[target.group_code] }} / {{ target.name }}{% if target.price_data_missing %}<br><span class="badge medium" title="该站价格表需登录，本期暂缺，仅监测口径变化">价格暂缺</span>{% endif %}</td>
-    <td>{{ change.change_type }}{% if change.source_url %}<br><a href="{{ change.source_url }}" target="_blank" rel="noreferrer">原文</a>{% endif %}</td>
-    <td>{{ change.data_source or "—" }}</td>
-    <td class="summary">{{ change.summary }}</td>
-    <td>{{ change.old_value or "—" }} → {{ change.new_value or "—" }}</td>
-    <td>{% if change.change_percent is not none %}{{ "%.4f"|format(change.change_percent) }}%{% else %}—{% endif %}</td>
-    <td><span class="badge">{{ change.signal_type }}</span> <span class="badge {{ change.severity }}">{{ change.severity }}</span></td>
-    <td>{{ change.verify_status }}</td>
-  </tr>{% endfor %}</tbody>
-</table>
-{% else %}<div class="empty">暂无符合条件的变动记录</div>{% endif %}
+<section class="stats" aria-label="监测概况">
+  <article class="stat"><span class="stat-label">监测对象</span><strong class="stat-value">{{ target_count }}</strong><span class="stat-unit">个</span><span class="stat-note">{{ enabled_target_count }} 个处于启用状态</span></article>
+  <article class="stat"><span class="stat-label">当前快照</span><strong class="stat-value">{{ snapshot_count }}</strong><span class="stat-unit">条</span><span class="stat-note">成功与失败快照均保留</span></article>
+  <article class="stat confirmed"><span class="stat-label">已确认变动</span><strong class="stat-value">{{ confirmed_count }}</strong><span class="stat-unit">条</span><span class="stat-note">人工或规则已确认</span></article>
+  <article class="stat attention"><span class="stat-label">待核对</span><strong class="stat-value">{{ pending_count }}</strong><span class="stat-unit">条</span><span class="stat-note">{{ high_pending_count }} 条 high 级待核对</span></article>
+</section>
+
+<div class="workspace">
+  <section class="panel" aria-labelledby="changes-title">
+    <div class="panel-head">
+      <div><h2 id="changes-title">变动记录</h2><p>保留入库状态、变动数值与原始链接</p></div>
+      <span class="count-label">latest / {{ rows|length }}</span>
+    </div>
+    <form class="filters" method="get" action="/changes">
+      <div class="field grow">
+        <label for="group">对象类别</label>
+        <select id="group" name="group"><option value="">全部类别</option>{% for value, label in group_labels.items() %}<option value="{{ value }}" {% if group == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      </div>
+      <div class="field grow">
+        <label for="change-type">变动类型</label>
+        <select id="change-type" name="change_type"><option value="">全部类型</option>{% for value in change_types %}<option value="{{ value }}" {% if change_type == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select>
+      </div>
+      <div class="field grow">
+        <label for="signal-type">信号类型</label>
+        <select id="signal-type" name="signal_type"><option value="">全部信号</option><option value="confirmed" {% if signal_type == "confirmed" %}selected{% endif %}>confirmed · 落地变动</option><option value="warning" {% if signal_type == "warning" %}selected{% endif %}>warning · 预警信号</option></select>
+      </div>
+      <div class="filter-actions"><button class="button primary" type="submit">应用筛选</button><a class="button" href="/changes">重置</a></div>
+    </form>
+    <div class="result-line"><span>当前显示 <strong>{{ rows|length }}</strong> 条</span><span class="event-legend"><span class="badge event-badge price">价格变动</span><span class="badge event-badge feature">功能更新</span><span class="badge event-badge marketing">营销活动</span></span></div>
+
+    {% if rows %}
+    <div class="records">
+      {% for change, target in rows %}
+      {% set event_kind = 'price' if change.change_type in ['涨价', '降价', '价格变动', '口径变化'] else ('feature' if change.change_type in ['新功能', '新模型', '模型下线'] else ('marketing' if change.change_type == '营销活动' else 'neutral')) %}
+      <article class="record event-{{ event_kind }}">
+        <div class="record-top">
+          <div>
+            <h3 class="target-name">{{ target.name }}</h3>
+            <div class="target-group"><span>{{ group_labels[target.group_code] }}</span><span>记录 #{{ change.id }}</span></div>
+          </div>
+          <div class="badges">
+            <span class="badge event-badge {{ event_kind }}">{{ change.change_type }}</span>
+            <span class="badge {{ change.signal_type }}">{{ change.signal_type }}</span>
+            <span class="badge {{ change.severity }}">{{ change.severity }}</span>
+            <span class="badge {{ change.verify_status }}">{{ change.verify_status }}</span>
+            {% if target.price_data_missing %}<span class="badge medium" title="该站价格表需登录，本期暂缺，仅监测口径变化">价格暂缺</span>{% endif %}
+          </div>
+        </div>
+        <p class="record-summary">{{ change.summary }}</p>
+        <div class="record-meta">
+          <div><span>检测时间（北京时间）</span><strong class="mono">{{ change.detected_at|bj }}</strong></div>
+          <div><span>变动类型</span><strong>{{ change.change_type }}</strong></div>
+          <div><span>数据来源</span><strong class="mono">{{ change.data_source or "—" }}</strong></div>
+        </div>
+        {% if change.old_value is not none or change.new_value is not none or change.change_percent is not none %}
+        <div class="price-diff">
+          <div><span>旧值</span><strong>{{ change.old_value or "未披露" }}</strong></div>
+          <span class="price-arrow" aria-hidden="true">→</span>
+          <div><span>新值</span><strong>{{ change.new_value or "未披露" }}</strong></div>
+          <strong class="percent">{% if change.change_percent is not none %}{{ "%.4f"|format(change.change_percent) }}%{% else %}幅度无法计算{% endif %}</strong>
+        </div>
+        {% endif %}
+        <div class="record-footer">
+          <span class="record-id">entity / {{ change.entity_key or "未设置" }}</span>
+          {% if change.source_url %}<a class="button" href="{{ change.source_url }}" target="_blank" rel="noopener noreferrer">查看原文<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8"/><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>{% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><strong>暂无符合条件的变动记录</strong><p>可以重置筛选，或等待下一次采集产生新的 diff。</p></div>
+    {% endif %}
+  </section>
+
+  <aside class="side-rail" aria-label="值勤辅助信息">
+    <section class="panel side-panel">
+      <h2>核对台</h2>
+      <div class="side-big-number">{{ pending_count }}</div>
+      <div class="side-caption">条记录等待人工核对</div>
+      <div class="side-rows"><div class="side-row"><span>已确认变动</span><strong>{{ confirmed_count }}</strong></div><div class="side-row"><span>high 级待核对</span><strong>{{ high_pending_count }}</strong></div></div>
+      <a class="button primary full" href="/review">进入人工核对</a>
+    </section>
+    <section class="panel side-panel">
+      <h2>监测覆盖</h2>
+      <div class="coverage-total"><strong>{{ target_count }}</strong><span>个监测对象</span></div>
+      <div class="coverage-grid">{% for code, label in group_labels.items() %}<div class="coverage-group"><span>{{ label }}</span><strong>{{ group_counts.get(code, 0) }}</strong></div>{% endfor %}</div>
+    </section>
+    <section class="panel side-panel">
+      <h2>数据边界</h2>
+      <div class="side-note"><strong>价格暂缺不代表没有变化</strong>302.AI 价格表需登录，本期仅监测口径变化。采集失败不会产生 diff，历史导入记录保留原始来源。</div>
+    </section>
+  </aside>
+</div>
+
 {% if llm_usage %}
-<h2>LLM 提取用量（近 7 天，北京时间）</h2>
-<table>
-  <thead><tr><th>日期</th><th>站点</th><th>提取调用次数</th><th>估算 token</th></tr></thead>
-  <tbody>{% for item in llm_usage %}<tr><td>{{ item.date }}</td><td>{{ item.target_name }}</td><td>{{ item.calls }}</td><td>{{ item.estimated_tokens }}</td></tr>{% endfor %}</tbody>
-</table>
+<section class="panel section-panel">
+  <div class="panel-head"><div><h2>LLM 提取用量</h2><p>近 7 天，按北京时间日期与站点汇总</p></div><span class="count-label">estimated tokens</span></div>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>日期</th><th>站点</th><th>提取调用次数</th><th>估算 token</th></tr></thead><tbody>{% for item in llm_usage %}<tr><td class="mono">{{ item.date }}</td><td>{{ item.target_name }}</td><td class="mono">{{ item.calls }}</td><td class="mono">{{ item.estimated_tokens }}</td></tr>{% endfor %}</tbody></table></div>
+</section>
 {% endif %}
 {% endblock %}

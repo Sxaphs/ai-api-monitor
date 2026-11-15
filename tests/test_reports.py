@@ -51,6 +51,11 @@ def test_period_report_five_sections_prices_activities_and_warnings(session):
         verify_status="false_alarm", source_url="https://alpha.test/false",
         detected_at=start + timedelta(hours=7),
     )
+    add_change(
+        session, target=alpha, snapshot=None, change_type="X公告",
+        summary="多行公告第一行\n\n多行公告第二行", verify_status="confirmed",
+        source_url="https://x.com/a/status/multiline", detected_at=start + timedelta(hours=8),
+    )
 
     landed_warning = add_change(
         session, target=alpha, snapshot=None, change_type="新功能", summary="新功能预告",
@@ -91,6 +96,8 @@ def test_period_report_five_sections_prices_activities_and_warnings(session):
     assert "上线 gpt-test" in content and "下线 old-model" in content
     assert "充值送活动；[原文](https://alpha.test/campaign)" in content
     assert "计费口径调整（待人工核对）；[原文](https://302.ai/pricing)" in content
+    assert "多行公告第一行 多行公告第二行；[原文](https://x.com/a/status/multiline)" in content
+    assert "多行公告第一行\n" not in content
     assert "预警落地率：25.00%（1/4）" in content
     assert "落地 1 条；误报 1 条；超时未落地 1 条；仍在观察期 1 条" in content
     assert "预警「新功能预告」→ 落地「新功能已经上线」" in content

@@ -7,7 +7,7 @@ import pytest
 
 from app.collectors.http import FetchError, Fetcher
 from app.config import Settings
-from app.scheduler import create_scheduler
+from app.scheduler import create_scheduler, set_site_collection_hours
 
 
 def config(attempts=3):
@@ -52,6 +52,21 @@ def test_http_failure_after_three_attempts():
 def test_scheduler_only_has_collection_jobs(session_factory):
     scheduler = create_scheduler(session_factory)
     jobs = {job.id: job for job in scheduler.get_jobs()}
-    assert set(jobs) == {"collect-sites-6h", "collect-x-2h"}
-    assert jobs["collect-sites-6h"].trigger.interval == timedelta(hours=6)
+    assert set(jobs) == {"collect-sites", "collect-x-2h"}
+    assert "hour='2,8,14,20'" in str(jobs["collect-sites"].trigger)
+    assert "minute='0'" in str(jobs["collect-sites"].trigger)
     assert jobs["collect-x-2h"].trigger.interval == timedelta(hours=2)
+
+
+def test_site_collection_schedule_supports_12_and_24_hours(session_factory):
+    with session_factory() as session:
+        set_site_collection_hours(session, 12)
+    scheduler = create_scheduler(session_factory)
+    trigger = str(scheduler.get_job("collect-sites").trigger)
+    assert "hour='8,20'" in trigger
+
+    with session_factory() as session:
+        set_site_collection_hours(session, 24)
+    scheduler = create_scheduler(session_factory)
+    trigger = str(scheduler.get_job("collect-sites").trigger)
+    assert "hour='8'" in trigger
